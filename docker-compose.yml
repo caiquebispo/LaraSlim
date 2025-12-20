@@ -1,34 +1,144 @@
+################################################################################
+# LaraSlim Docker Compose Configuration
+################################################################################
+# Development mode: docker compose up
+# Production mode: docker compose --profile production up
+################################################################################
+
 services:
+    #---------------------------------------------------------------------------
+    # Web Application (Development)
+    #---------------------------------------------------------------------------
     web:
-        build: .
-        container_name: LaraSlim_app
+        build:
+            context: .
+            target: development
+        container_name: laraslim_app_dev
         ports:
-            - "8003:80"
+            - "${APP_PORT:-8003}:80"
         volumes:
             - ./:/var/www/html
-    mysql:
-        image: mysql:latest
-        container_name: LaraSlim_mysql
-        restart: always
+            - ./storage:/var/www/html/storage
         environment:
-            MYSQL_DATABASE: ${DB_DATABASE}
-            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-            MYSQL_ALLOW_EMPTY_PASSWORD: 1
-        volumes:
-            - laraSlim-mysql:/var/lib/mysql
+            - APP_ENV=${APP_ENV:-local}
+            - APP_DEBUG=${APP_DEBUG:-true}
+            - DB_CONNECTION=${DB_CONNECTION:-mysql}
+            - DB_HOST=mysql
+            - DB_PORT=3306
+            - DB_DATABASE=${DB_DATABASE:-LaraSlim_db}
+            - DB_USERNAME=${DB_USERNAME:-root}
+            - DB_PASSWORD=${DB_PASSWORD:-root}
+        depends_on:
+            mysql:
+                condition: service_healthy
+        networks:
+            - laraslim-network
+        profiles:
+            - default
+            - development
+
+    #---------------------------------------------------------------------------
+    # Web Application (Production)
+    #---------------------------------------------------------------------------
+    web-prod:
+        build:
+            context: .
+            target: production
+        container_name: laraslim_app_prod
         ports:
-            - "3306:3306"
+            - "${APP_PORT:-8003}:80"
+        environment:
+            - APP_ENV=production
+            - APP_DEBUG=false
+            - DB_CONNECTION=${DB_CONNECTION:-mysql}
+            - DB_HOST=mysql
+            - DB_PORT=3306
+            - DB_DATABASE=${DB_DATABASE:-LaraSlim_db}
+            - DB_USERNAME=${DB_USERNAME:-root}
+            - DB_PASSWORD=${DB_PASSWORD:-root}
+        depends_on:
+            mysql:
+                condition: service_healthy
+        networks:
+            - laraslim-network
+        restart: unless-stopped
+        deploy:
+            resources:
+                limits:
+                    cpus: '0.50'
+                    memory: 512M
+                reservations:
+                    cpus: '0.25'
+                    memory: 256M
+        logging:
+            driver: json-file
+            options:
+                max-size: "10m"
+                max-file: "3"
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost/"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 10s
+        profiles:
+            - production
+
+    #---------------------------------------------------------------------------
+    # MySQL Database
+    #---------------------------------------------------------------------------
+    mysql:
+        image: mysql:8.0
+        container_name: laraslim_mysql
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE:-LaraSlim_db}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+            MYSQL_ALLOW_EMPTY_PASSWORD: "no"
+        volumes:
+            - laraslim-mysql:/var/lib/mysql
+        ports:
+            - "${DB_PORT:-3306}:3306"
+        networks:
+            - laraslim-network
+        healthcheck:
+            test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-root}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+
+    #---------------------------------------------------------------------------
+    # PHPMyAdmin (Development Only)
+    #---------------------------------------------------------------------------
     phpmyadmin:
         image: phpmyadmin/phpmyadmin:latest
-        container_name: LaraSlim_phpmyadmin
-        restart: always
+        container_name: laraslim_phpmyadmin
+        restart: unless-stopped
         depends_on:
-            - mysql
+            mysql:
+                condition: service_healthy
         environment:
             PMA_HOST: mysql
-            MYSQL_ROOT_PASSWORD: root
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
         ports:
-            - "8080:80"
+            - "${PHPMYADMIN_PORT:-8080}:80"
+        networks:
+            - laraslim-network
+        profiles:
+            - default
+            - development
+
+#-------------------------------------------------------------------------------
+# Networks
+#-------------------------------------------------------------------------------
+networks:
+    laraslim-network:
+        driver: bridge
+
+#-------------------------------------------------------------------------------
+# Volumes
+#-------------------------------------------------------------------------------
 volumes:
-    laraSlim-mysql:
+    laraslim-mysql:
         driver: local

@@ -12,6 +12,7 @@
 */
 
 pest()->extend(Tests\TestCase::class)->in('Feature');
+pest()->extend(Tests\TestCase::class)->in('Unit');
 
 /*
 |--------------------------------------------------------------------------
@@ -28,6 +29,20 @@ expect()->extend('toBeOne', function () {
     return $this->toBe(1);
 });
 
+expect()->extend('toBeSuccessful', function () {
+    $status = $this->value->getStatusCode();
+    return expect($status)->toBeGreaterThanOrEqual(200)->toBeLessThan(300);
+});
+
+expect()->extend('toBeJson', function () {
+    $contentType = $this->value->getHeaderLine('Content-Type');
+    return expect($contentType)->toContain('application/json');
+});
+
+expect()->extend('toHaveStatus', function (int $status) {
+    return expect($this->value->getStatusCode())->toBe($status);
+});
+
 /*
 |--------------------------------------------------------------------------
 | Functions
@@ -39,7 +54,27 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Get the response body as JSON
+ */
+function getJson(\Psr\Http\Message\ResponseInterface $response): array
 {
-    // ..
+    $response->getBody()->rewind();
+    return json_decode($response->getBody()->getContents(), true) ?? [];
+}
+
+/**
+ * Generate a random email for testing
+ */
+function fakeEmail(): string
+{
+    return substr(bin2hex(random_bytes(8)), 0, 8) . '@example.com';
+}
+
+/**
+ * Generate a random string for testing
+ */
+function fakeString(int $length = 10): string
+{
+    return substr(bin2hex(random_bytes($length)), 0, $length);
 }

@@ -8,21 +8,28 @@ class AppServiceProvider
 {
     public function register(ContainerInterface $container): void
     {
-        $providers = $this->loadProvider();
-
-        foreach ($providers['providers'] as $providerClass) {
-            $provider = new $providerClass();
-            $provider->register($container);
+        $configPath = __DIR__ . '/../../../config/app.php';
+        
+        if (!file_exists($configPath)) {
+            throw new \RuntimeException("Arquivo de configuração não encontrado: {$configPath}");
         }
+        
+        $config = require $configPath;
+        
+        $container->set('config', $config);
+        
+        $this->registerServices($container, $config);
     }
 
-    /**
-     * Load the application configuration.
-     *
-     * @return array<string, mixed>
-     */
-    private function loadProvider(): array
+    protected function registerServices(ContainerInterface $container, array $config): void
     {
-        return require_once __DIR__.'./../../../config/app.php';
+        if (isset($config['database'])) {
+            $container->set('database.config', $config['database']);
+        }
+        
+        if (isset($config['app'])) {
+            $container->set('app.config', $config['app']);
+        }
+        
     }
 }

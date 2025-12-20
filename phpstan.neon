@@ -1,3 +1,23 @@
 parameters:
+    level: 6
+    paths:
+        - app
+        - tests
     excludePaths:
-        - tests/*
+        - vendor
+        - storage
+        - bootstrap/cache
+    
+    # Treat PHPDoc types as certain
+    treatPhpDocTypesAsCertain: false
+    
+    # Report unmatched ignored errors
+    reportUnmatchedIgnoredErrors: false
+    
+    # Ignore specific errors that are expected
+    ignoreErrors:
+        # PHP-DI Container uses magic methods
+        - '#Call to an undefined method Psr\\Container\\ContainerInterface::#'
+        
+        # Blade template magic
+        - '#Call to an undefined method BladeSlim\\Blade::#'

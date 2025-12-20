@@ -23,11 +23,23 @@ It also doesn't include a template engine, but you can integrate it with Blade (
 
 ---
 
+## Features
+
+- 🚀 **Lightweight & Fast** - Built on Slim Framework 4
+- 🔒 **Security First** - CORS and Security Headers middlewares included
+- 📝 **Centralized Error Handling** - PSR-3 logging, JSON error responses
+- 🐳 **Docker Ready** - Multi-stage builds for dev and production
+- ✅ **Testing Infrastructure** - Pest PHP with HTTP testing helpers
+- 🔧 **Environment Validation** - Automatic validation of required variables
+
+---
+
 ## Requirements
 
 - PHP ^8.4
-- Docker
+- Docker (optional)
 - Composer
+
 ---
 
 ## Installation via Composer
@@ -38,110 +50,181 @@ composer create-project caiquebispo/laraslim example_app
 
 ---
 
-## Manual Installation
+## Quick Start
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/caiquebispo/LaraSlim.git
-   cd LaraSlim
-   ```
+### Using PHP Built-in Server
 
-2. Build Docker containers:
-   ```bash
-   sh build
-   ```
+```bash
+cd example_app
+cp .env.example .env
+composer install
+php -S localhost:8008 -t public
+```
 
-3. Start the Docker containers:
-   ```bash
-   sh up
-   ```
-4. Attach the Docker containers:
-   ```bash
-   sh attach
-   ```
-5. Down the Docker containers:
-   ```bash
-   sh down
-   ```
-6. Install dependencies:
-   ```bash
-   composer install
-   ```
-7. Copy the `.env` file:
-   ```bash
-   cp .env.exemple .env
-   ```
-8. Run tests and checks:
-   ```bash
-   composer test
-   ```
+### Using Docker
+
+```bash
+# Development
+docker compose up
+
+# Production
+docker compose --profile production up
+```
+
 ---
-9. Show all available commands:
-   ```bash
-   php artisan-slim
-   ```
+
+## Docker Commands
+
+| Command | Description |
+|---------|-------------|
+| `./bin/build` | Build Docker containers |
+| `./bin/up` | Start Docker containers |
+| `./bin/attach` | Attach to container |
+| `./bin/down` | Stop Docker containers |
+
 ---
 
 ## Application Access
 
-- API: `http://localhost:8003`
-- PHPMyAdmin: `http://localhost:8080`
-    - **User:** `root`
-    - **Password:** `root`
+- **API**: `http://localhost:8003` (Docker) or `http://localhost:8008` (PHP server)
+- **PHPMyAdmin**: `http://localhost:8080` (User: `root`, Password: `root`)
 
 ---
 
 ## Project Structure
 
-- `app/Http/Controllers`: Application controllers.
-- `app/Http/Request`: Form validation files.
-- `app/Models`: Data models.
-- `app/DTOs`: Data Transfer Objects.
-- `app/Services`: Business logic layer.
-- `app/Kernel`: Configuration and setup files.
-- `database/migrations`: Database migration files.
-- `public`: Web-accessible files (e.g., `index.php`).
-- `composer.json`: Composer configuration.
+```
+app/
+├── Contracts/          # Interfaces and contracts
+├── Http/
+│   ├── Controllers/    # Application controllers
+│   ├── Middleware/     # CORS, Security Headers
+│   └── Request/        # Form validation
+├── Kernel/
+│   ├── Exceptions/     # HttpException, ValidationException, Handler
+│   └── Providers/      # Service providers (Logging, Database, etc.)
+├── Models/             # Eloquent models
+├── DTOs/               # Data Transfer Objects
+└── Services/           # Business logic
+config/
+├── app.php             # Application config
+├── cors.php            # CORS configuration
+└── environments.php    # Environment validation
+tests/
+├── Feature/            # Feature tests
+├── Unit/               # Unit tests
+└── Traits/             # Test helpers (DatabaseMigrations, WithFaker)
+```
 
 ---
 
-## Database Configuration
+## Environment Configuration
 
-Configure your `.env` file as needed. Example using SQLite:
+Copy `.env.example` to `.env` and configure:
 
 ```dotenv
-DB_CONNECTION="sqlite"
-DB_HOST=""
-DB_DATABASE="../database/skeleton_db.sqlite"
-DB_USERNAME=""
-DB_PASSWORD=""
+# Application
+APP_ENV=local
+APP_DEBUG=true
+
+# Database (MySQL)
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_DATABASE=LaraSlim_db
+DB_USERNAME=root
+DB_PASSWORD=root
+
+# Or SQLite
+DB_CONNECTION=sqlite
+DB_DATABASE=../storage/database.sqlite
 ```
 
 ---
 
-## Useful Commands
+## Artisan Commands
 
-Create a new migration:
 ```bash
 php artisan-slim make:migration users
-```
-
-Create a new model:
-```bash
 php artisan-slim make:model User
-```
-
-Create a new controller:
-```bash
 php artisan-slim make:controller UserController
-```
-
-Create a new form request:
-```bash
 php artisan-slim make:request UserRequest
+php artisan-slim          # List all commands
 ```
 
-> Migrations are automatically executed when the container is started.
+---
+
+## Response Helpers
+
+```php
+use LaraSlim\Kernel\Providers\Response;
+
+// Success response
+return response()->success($data, 'Created', 201);
+
+// Error response
+return response()->error('Not found', 404);
+
+// Validation error
+return response()->validationError($errors);
+
+// Paginated response
+return response()->paginate($items, $total, $page, $perPage);
+```
+
+---
+
+## Exception Handling
+
+```php
+use LaraSlim\Kernel\Exceptions\HttpException;
+
+// Throw HTTP exception
+throw HttpException::notFound('User not found');
+throw HttpException::unauthorized();
+
+// Or use helpers
+abort(404, 'Resource not found');
+abort_if($condition, 403, 'Forbidden');
+```
+
+---
+
+## Helper Functions
+
+| Function | Description |
+|----------|-------------|
+| `env($key, $default)` | Get environment variable |
+| `config($key, $default)` | Get config value (dot notation) |
+| `response()` | Get Response helper instance |
+| `abort($code, $message)` | Throw HTTP exception |
+| `logger()` | Get PSR-3 logger |
+| `info($message)` | Log info message |
+| `base_path($path)` | Get base path |
+| `storage_path($path)` | Get storage path |
+
+---
+
+## Security
+
+LaraSlim includes built-in security middlewares:
+
+- **CORS** - Configurable via `config/cors.php` or environment variables
+- **Security Headers** - X-Frame-Options, X-Content-Type-Options, HSTS (production)
+
+---
+
+## Testing
+
+```bash
+# Run all tests
+composer test
+
+# Or just Pest
+vendor/bin/pest
+
+# With coverage
+vendor/bin/pest --coverage
+```
 
 ---
 
@@ -158,66 +241,16 @@ $app->group('/api', function (RouteCollectorProxy $group) {
 });
 ```
 
-### Simple Route
-
-```php
-use LaraSlim\Controllers\HomeController;
-
-$app->get('/', [HomeController::class, 'index']);
-```
-
-### Basic Controller
-
-```php
-<?php
-
-namespace LaraSlim\Controllers;
-
-class HomeController
-{
-    public function index()
-    {
-        // Controller logic here
-    }
-}
-```
-
-### Form Request
-
-```php
-<?php
-
-namespace LaraSlim\Http\Request;
-
-class UserRequest extends BaseRequest
-{
-    protected function rules(): array
-    {
-        return [
-            //'name' => 'required|string|max:255',
-        ];
-    }
-
-    protected function messages(): array
-    {
-        return [
-            //'email.required' => 'The email field is required.',
-        ];
-    }
-}
-```
-
-### Using Form Request in Controller
+### Controller with Response Helper
 
 ```php
 <?php
 
 namespace LaraSlim\Http\Controllers;
 
-use LaraSlim\DTOs\UserDTO;
-use LaraSlim\Http\Request\UserRequest;
-use LaraSlim\Kernel\Providers\Response;
 use LaraSlim\Services\UserServices;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
 
 class UserController
 {
@@ -225,23 +258,10 @@ class UserController
 
     public function store(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $validator = (new UserRequest($request->getParsedBody()))->validate();
+        $data = $request->getParsedBody();
+        $user = $this->userServices->store($data);
 
-        if ($validator->fails()) {
-            return (new Response($response))->json([
-                'status' => 'error',
-                'message' => 'Validation failed',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $user = $this->userServices->store(new UserDTO(...$request->getParsedBody()));
-
-        return (new Response($response))->json([
-            'status' => 'success',
-            'message' => 'User created successfully',
-            'user' => $user
-        ], 201);
+        return response($response)->created($user, 'User created successfully');
     }
 }
 ```
